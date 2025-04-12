@@ -40,6 +40,7 @@ FPS = 60
 # teleport delay in frames
 TELEPORT_DELAY = FPS / 2
 FREEZE_DELAY = FPS * 2
+FREEZE_KEY_TIMEOUT = FPS * 2
 
 SCORE_OFFSET = 10
 
@@ -109,6 +110,8 @@ ship.rect = ship.surf.get_rect()
 teleportTimeOut = 0
 freezeTimeOut = 0
 
+freezeKeyTimeOut = 0
+
 # global score variable increases every second
 playerScore = 0
 tickCounter = 0
@@ -131,7 +134,7 @@ while running:
     for event in pg.event.get():
         if event.type == pg.QUIT:
             running = False
-        elif event.type == ADD_ENEMY:
+        elif event.type == ADD_ENEMY and freezeTimeOut == 0:
             createEnemy()
 
     # black background
@@ -144,8 +147,9 @@ while running:
     if pressedKeys[K_ESCAPE]:
         running = False
 
-    if pressedKeys[K_f]:
+    if pressedKeys[K_f] and freezeKeyTimeOut > FREEZE_KEY_TIMEOUT:
         freezeTimeOut = FREEZE_DELAY
+        freezeKeyTimeOut = 0
 
 
     if pg.sprite.spritecollideany(ship, enemies):
@@ -190,6 +194,7 @@ while running:
             teleportTimeOut = 0
 
     teleportTimeOut += 1
+    freezeKeyTimeOut += 1
 
     tickCounter += 1
     # 60 fps
