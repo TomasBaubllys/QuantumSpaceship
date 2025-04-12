@@ -1,8 +1,3 @@
-# TODO
-
-# add shooting
-# add enemy freezing
-
 import random
 
 try:
@@ -54,6 +49,12 @@ STATE_KEY_DELAY = FPS
 SCORE_OFFSET_X = 100
 SCORE_OFFSET_Y = 10
 SCORE_STATE_FONT_SIZE = 20
+
+MEASUREMENT_COUNT_DOWN = FPS * 2
+
+def displayMeasurement():
+    stateTextSurface = myFontScoreState.render("Measurement: " + str(fate), False, (255, 0, 0), (0, 0, 0))
+    screen.blit(stateTextSurface, (SCREEN_WIDTH / 2, SCORE_OFFSET_Y))
 
 def gameOver():
     textSurface = myFontGameOver.render('Game Over!', False, (255, 0, 0), (0, 0, 0))
@@ -180,6 +181,11 @@ thereIsMessage = False
 myFontGameOver= pg.font.SysFont('Arial', 48)
 myFontScoreState = pg.font.SysFont('Arial', SCORE_STATE_FONT_SIZE)
 
+measurementCountDown = 0
+
+# used to store the measurements
+fate = 0
+
 while running:
     #print(gameState)
 
@@ -218,7 +224,7 @@ while running:
         stateSwitchingDelay = 0
         if quantumState == 0:
             quantumState = 1
-        if quantumState == 1:
+        elif quantumState == 1:
             quantumState = 0
 
     if pressedKeys[K_h] and stateSwitchingDelay >= STATE_KEY_DELAY:
@@ -252,11 +258,13 @@ while running:
             if quantumState == fate:
                 gameState = 0
                 classicState = quantumState
+                measurementCountDown = MEASUREMENT_COUNT_DOWN
 
             else:
                 twinShip.kill()
                 ship.kill()
                 gameOver()
+                displayMeasurement()
                 running = False
                 thereIsMessage = True
 
@@ -267,11 +275,13 @@ while running:
                 twinShip.kill()
                 ship.kill()
                 gameOver()
+                displayMeasurement()
                 running = False
                 thereIsMessage = True
             else:
                 gameState = 0
                 classicState = fate
+                measurementCountDown = MEASUREMENT_COUNT_DOWN
 
     # update the sprites
     if freezeTimeOut > 0:
@@ -315,6 +325,10 @@ while running:
     if tickCounter > FPS:
         tickCounter = 0
         playerScore += 1
+
+    if measurementCountDown > 0:
+        measurementCountDown -= 1
+        displayMeasurement()
 
     if pressedKeys[K_r]:
         if teleportTimeOut > TELEPORT_DELAY:
