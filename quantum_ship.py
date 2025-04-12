@@ -159,6 +159,8 @@ gameState = 0
 classicState = 0
 # 0 represents |+> 1 represents |->
 quantumState = 0
+# temporary fix
+displayQuantumSTate = 0
 
 stateSwitchingDelay = 0
 
@@ -187,7 +189,7 @@ measurementCountDown = 0
 fate = 0
 
 while running:
-    #print(gameState)
+    rand = random.randint(0, 300)
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
@@ -209,7 +211,7 @@ while running:
         freezeTimeOut = FREEZE_DELAY
         freezeKeyTimeOut = 0
 
-    if pressedKeys[K_x] and stateSwitchingDelay >= STATE_KEY_DELAY and gameState == 0:
+    if ((pressedKeys[K_x] and stateSwitchingDelay >= STATE_KEY_DELAY) or rand == 100 or rand == 200 )and gameState == 0:
         stateSwitchingDelay = 0
         ship_x = ship.rect.centerx
         ship_y = ship.rect.centery
@@ -220,14 +222,14 @@ while running:
             classicState = 0
             ship.rect = ship.surf.get_rect(center = (ship_x, ship_y - SCREEN_HEIGHT / 2))
 
-    if pressedKeys[K_z] and stateSwitchingDelay >= STATE_KEY_DELAY and gameState == 1:
+    if ((pressedKeys[K_z] and stateSwitchingDelay >= STATE_KEY_DELAY) or rand == 50 or rand == 250 ) and gameState == 1:
         stateSwitchingDelay = 0
-        if quantumState == 0:
-            quantumState = 1
-        elif quantumState == 1:
-            quantumState = 0
+        if displayQuantumSTate == 0:
+            displayQuantumSTate = 1
+        elif displayQuantumSTate == 1:
+            displayQuantumSTate = 0
 
-    if pressedKeys[K_h] and stateSwitchingDelay >= STATE_KEY_DELAY:
+    if pressedKeys[K_h] and stateSwitchingDelay >= STATE_KEY_DELAY or rand == 150:
         if gameState == 0:
             gameState = 1
             twinShip_x = ship.rect.centerx
@@ -308,7 +310,7 @@ while running:
         stateTextSurface = myFontScoreState.render("State: |" + str(classicState) + ">", False, (255, 0, 0), (0, 0, 0))
     else:
         charState = '+'
-        if quantumState == 1:
+        if displayQuantumSTate == 1:
             charState = '-'
         stateTextSurface = myFontScoreState.render("State: |" + charState + ">", False, (255, 0, 0), (0, 0, 0))
 
@@ -316,6 +318,10 @@ while running:
 
     # draw a line in the middle of the screen
     pg.draw.line(screen, (255, 255, 255), (0, SCREEN_HEIGHT / 2), (SCREEN_WIDTH, SCREEN_HEIGHT / 2), LINE_WIDTH)
+
+    if measurementCountDown > 0:
+        measurementCountDown -= 1
+        displayMeasurement()
 
     pg.display.flip()
 
@@ -325,10 +331,6 @@ while running:
     if tickCounter > FPS:
         tickCounter = 0
         playerScore += 1
-
-    if measurementCountDown > 0:
-        measurementCountDown -= 1
-        displayMeasurement()
 
     if pressedKeys[K_r]:
         if teleportTimeOut > TELEPORT_DELAY:
