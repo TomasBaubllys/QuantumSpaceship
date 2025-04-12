@@ -19,12 +19,16 @@ from pygame.locals import (
     K_LEFT,
     K_ESCAPE,
     K_r,
-    K_f
+    K_f,
+    K_x,
+    K_h
 )
 
 # screen constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
+
+LINE_WIDTH = 4
 
 # enemy constants
 CREATING_ENEMY_TIME_INTERVAL = 250 # milliseconds
@@ -37,12 +41,18 @@ ENEMY_SPEED_MIN = 5
 ENEMY_SPEED_MAX = 15
 FPS = 60
 
+SHIP_WIDTH = 60
+SHIP_HEIGHT = 20
+
 # teleport delay in frames
 TELEPORT_DELAY = FPS / 2
 FREEZE_DELAY = FPS * 2
 FREEZE_KEY_TIMEOUT = FPS * 2
+STATE_KEY_DELAY = FPS
 
-SCORE_OFFSET = 10
+SCORE_OFFSET_X = 100
+SCORE_OFFSET_Y = 10
+SCORE_STATE_FONT_SIZE = 20
 
 def teleporShip():
     while True:
@@ -71,10 +81,18 @@ def keepShipBounds():
         ship.rect.left = 0
     if ship.rect.right > SCREEN_WIDTH:
         ship.rect.right = SCREEN_WIDTH
-    if ship.rect.top < 0:
-        ship.rect.top = 0
-    if ship.rect.bottom > SCREEN_HEIGHT:
-        ship.rect.bottom = SCREEN_HEIGHT
+
+    if classicState == 0:
+        if ship.rect.bottom > SCREEN_HEIGHT / 2 - LINE_WIDTH / 2:
+            ship.rect.bottom = SCREEN_HEIGHT / 2 - LINE_WIDTH / 2
+        if ship.rect.top < 0:
+            ship.rect.top = 0
+
+    if classicState == 1:
+        if ship.rect.top < SCREEN_HEIGHT / 2 + LINE_WIDTH / 2:
+            ship.rect.top = SCREEN_HEIGHT / 2 + LINE_WIDTH / 2
+        if ship.rect.bottom > SCREEN_HEIGHT:
+            ship.rect.bottom = SCREEN_HEIGHT
 
 def createEnemy():
     enemy = pg.sprite.Sprite()
@@ -93,6 +111,17 @@ def updateEnemies():
         if enemy.rect.right < 0:
             enemy.kill()
 
+        if gameState == 1:
+            if pressedKeys[K_UP]:
+                enemy.rect.move_ip(0, -5)
+            if pressedKeys[K_DOWN]:
+                enemy.rect.move_ip(0, 5)
+
+        if enemy.rect.bottom > SCREEN_HEIGHT:
+            enemy.rect.top = 0
+        elif enemy.rect.top < 0:
+            enemy.rect.bottom = SCREEN_HEIGHT
+
 # initialize pygame
 pg.init()
 
@@ -104,13 +133,28 @@ screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 # setup the ship
 ship = pg.sprite.Sprite()
-ship.surf = pg.Surface((60, 20))
+ship.surf = pg.Surface((SHIP_WIDTH, SHIP_HEIGHT))
 ship.surf.fill((0, 255, 0))
 ship.rect = ship.surf.get_rect()
+
+twinShip = pg.sprite.Sprite()
+twinShip.surf = pg.Surface((SHIP_WIDTH, SHIP_HEIGHT))
+twinShip.surf.fill((0, 255, 0))
+twinShip.rect = twinShip.surf.get_rect()
+
 teleportTimeOut = 0
 freezeTimeOut = 0
 
 freezeKeyTimeOut = 0
+
+# 0 represents classic, 1 represents quantum
+gameState = 0
+# 0 represents |0> 1 represents |1>
+classicState = 0
+# 0 represents |+> 1 represents |->
+quantumState = 0
+
+stateSwitchingDelay = 0
 
 # global score variable increases every second
 playerScore = 0
@@ -128,7 +172,8 @@ running = True
 thereIsMessage = False
 
 # font variable
-myFont = pg.font.SysFont('Arial', 48)
+myFontGameOver= pg.font.SysFont('Arial', 48)
+myFontScoreState = pg.font.SysFont('Arial', SCORE_STATE_FONT_SIZE)
 
 while running:
     for event in pg.event.get():
@@ -151,33 +196,80 @@ while running:
         freezeTimeOut = FREEZE_DELAY
         freezeKeyTimeOut = 0
 
+    if pressedKeys[K_x] and stateSwitchingDelay >= STATE_KEY_DELAY:
+        stateSwitchingDelay = 0
+        ship_x = ship.rect.centerx
+        ship_y = ship.rect.centery
+        if classicState == 0:
+            classicState = 1
+            ship.rect = ship.surf.get_rect(center = (ship_x, ship_y + SCREEN_HEIGHT / 2))
+        elif classicState == 1:
+            classicState = 0
+            ship.rect = ship.surf.get_rect(center = (ship_x, ship_y - SCREEN_HEIGHT / 2))
+
+    if pressedKeys[K_h] and stateSwitchingDelay >= STATE_KEY_DELAY:
+        if gameState == 0:
+            gameState = 1
+            twinShip_x = ship.rect.centerx
+            twinShip_y = ship.rect.centery
+
+            if classicState == 0:
+                twinShip_y += SCREEN_HEIGHT / 2 + SHIP_HEIGHT / 2 + LINE_WIDTH / 2
+            else:
+                twinShip_y -= SCREEN_HEIGHT / 2
+
+            quantumState = classicState
+            twinShip.rect = ship.surf.get_rect(center = (twinShip_x, twinShip_y))
+
+        elif gameState == 1:
+            gameState = 0
+
+        stateSwitchingDelay = 0
+
 
     if pg.sprite.spritecollideany(ship, enemies):
         ship.kill()
         running = False
 
         # create  text surface
-        textSurface = myFont.render('Game Over!', False, (255, 0, 0), (0, 0, 0))
+        textSurface = myFontGameOver.render('Game Over!', False, (255, 0, 0), (0, 0, 0))
         screen.blit(textSurface, (SCREEN_WIDTH // 3, SCREEN_HEIGHT // 3))
         thereIsMessage = True
 
 
     # update the sprites
-
     if freezeTimeOut > 0:
         freezeTimeOut -= 1
     else:
         updateEnemies()
 
-    updateShip(pressedKeys)
+    if gameState == 0:
+        updateShip(pressedKeys)
 
     # display the ship
     for entity in allSprites:
         screen.blit(entity.surf, entity.rect)
 
-    # display the score
-    scoreTextSurface = myFont.render(str(playerScore), False, (255, 0, 0))
-    screen.blit(scoreTextSurface, (SCORE_OFFSET, SCORE_OFFSET))
+    if gameState == 1:
+        screen.blit(twinShip.surf, twinShip.rect)
+
+    # display the score and state
+    scoreTextSurface = myFontScoreState.render("Score: " +  str(playerScore) , False, (255, 0, 0))
+    screen.blit(scoreTextSurface, (SCREEN_WIDTH - SCORE_OFFSET_X, SCORE_OFFSET_Y))
+
+
+    if gameState == 0:
+        stateTextSurface = myFontScoreState.render("State: |" + str(classicState) + ">", False, (255, 0, 0), (0, 0, 0))
+    else:
+        charState = '+'
+        if quantumState == 1:
+            charState = '-'
+        stateTextSurface = myFontScoreState.render("State: |" + charState + ">", False, (255, 0, 0), (0, 0, 0))
+
+    screen.blit(stateTextSurface, (SCREEN_WIDTH - SCORE_OFFSET_X, SCORE_OFFSET_Y * 2 + SCORE_STATE_FONT_SIZE))
+
+    # draw a line in the middle of the screen
+    pg.draw.line(screen, (255, 255, 255), (0, SCREEN_HEIGHT / 2), (SCREEN_WIDTH, SCREEN_HEIGHT / 2), LINE_WIDTH)
 
     pg.display.flip()
 
@@ -193,6 +285,7 @@ while running:
             teleporShip()
             teleportTimeOut = 0
 
+    stateSwitchingDelay += 1
     teleportTimeOut += 1
     freezeKeyTimeOut += 1
 
