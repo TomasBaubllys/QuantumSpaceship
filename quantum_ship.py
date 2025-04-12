@@ -21,7 +21,8 @@ from pygame.locals import (
     K_r,
     K_f,
     K_x,
-    K_h
+    K_h,
+    K_z
 )
 
 # screen constants
@@ -31,14 +32,14 @@ SCREEN_HEIGHT = 600
 LINE_WIDTH = 4
 
 # enemy constants
-CREATING_ENEMY_TIME_INTERVAL = 250 # milliseconds
+CREATING_ENEMY_TIME_INTERVAL = 500#250 # milliseconds
 ADD_ENEMY = pg.USEREVENT + 1
 ENEMY_HEIGHT = 10
 ENEMY_WIDTH = 20
 ENEMY_CREATION_OFFSET_X_MIN = 20
 ENEMY_CREATION_OFFSET_X_MAX = 100
-ENEMY_SPEED_MIN = 5
-ENEMY_SPEED_MAX = 15
+ENEMY_SPEED_MIN = 1#5
+ENEMY_SPEED_MAX = 5#15
 FPS = 60
 
 SHIP_WIDTH = 60
@@ -53,6 +54,10 @@ STATE_KEY_DELAY = FPS
 SCORE_OFFSET_X = 100
 SCORE_OFFSET_Y = 10
 SCORE_STATE_FONT_SIZE = 20
+
+def gameOver():
+    textSurface = myFontGameOver.render('Game Over!', False, (255, 0, 0), (0, 0, 0))
+    screen.blit(textSurface, (SCREEN_WIDTH // 3, SCREEN_HEIGHT // 3))
 
 def teleporShip():
     while True:
@@ -176,6 +181,8 @@ myFontGameOver= pg.font.SysFont('Arial', 48)
 myFontScoreState = pg.font.SysFont('Arial', SCORE_STATE_FONT_SIZE)
 
 while running:
+    #print(gameState)
+
     for event in pg.event.get():
         if event.type == pg.QUIT:
             running = False
@@ -196,7 +203,7 @@ while running:
         freezeTimeOut = FREEZE_DELAY
         freezeKeyTimeOut = 0
 
-    if pressedKeys[K_x] and stateSwitchingDelay >= STATE_KEY_DELAY:
+    if pressedKeys[K_x] and stateSwitchingDelay >= STATE_KEY_DELAY and gameState == 0:
         stateSwitchingDelay = 0
         ship_x = ship.rect.centerx
         ship_y = ship.rect.centery
@@ -206,6 +213,13 @@ while running:
         elif classicState == 1:
             classicState = 0
             ship.rect = ship.surf.get_rect(center = (ship_x, ship_y - SCREEN_HEIGHT / 2))
+
+    if pressedKeys[K_z] and stateSwitchingDelay >= STATE_KEY_DELAY and gameState == 1:
+        stateSwitchingDelay = 0
+        if quantumState == 0:
+            quantumState = 1
+        if quantumState == 1:
+            quantumState = 0
 
     if pressedKeys[K_h] and stateSwitchingDelay >= STATE_KEY_DELAY:
         if gameState == 0:
@@ -220,22 +234,44 @@ while running:
 
             quantumState = classicState
             twinShip.rect = ship.surf.get_rect(center = (twinShip_x, twinShip_y))
-
         elif gameState == 1:
             gameState = 0
-
         stateSwitchingDelay = 0
 
+    if gameState == 0:
+        if pg.sprite.spritecollideany(ship, enemies):
+            ship.kill()
+            running = False
+            # create  text surface
+            gameOver()
+            thereIsMessage = True
+    else:
+        if pg.sprite.spritecollideany(twinShip, enemies):
+            fate = random.randint(0, 1)
+            print("Measured: " + str(fate))
+            if quantumState == fate:
+                gameState = 0
+                classicState = quantumState
 
-    if pg.sprite.spritecollideany(ship, enemies):
-        ship.kill()
-        running = False
+            else:
+                twinShip.kill()
+                ship.kill()
+                gameOver()
+                running = False
+                thereIsMessage = True
 
-        # create  text surface
-        textSurface = myFontGameOver.render('Game Over!', False, (255, 0, 0), (0, 0, 0))
-        screen.blit(textSurface, (SCREEN_WIDTH // 3, SCREEN_HEIGHT // 3))
-        thereIsMessage = True
-
+        elif pg.sprite.spritecollideany(ship, enemies):
+            fate = random.randint(0, 1)
+            print("Measured: " + str(fate))
+            if quantumState == fate:
+                twinShip.kill()
+                ship.kill()
+                gameOver()
+                running = False
+                thereIsMessage = True
+            else:
+                gameState = 0
+                classicState = fate
 
     # update the sprites
     if freezeTimeOut > 0:
@@ -246,7 +282,7 @@ while running:
     if gameState == 0:
         updateShip(pressedKeys)
 
-    # display the ship
+    # display the ships
     for entity in allSprites:
         screen.blit(entity.surf, entity.rect)
 
