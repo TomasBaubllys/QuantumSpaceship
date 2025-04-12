@@ -1,6 +1,6 @@
 # Photonic Ship
 
-Photonic Ship is a simple 2D game made in Python using Pygame. It was developed for a project at Vilnius University and presented on April 12, 2025. The game includes basic mechanics inspired by quantum computing concepts like state switching and measurement.
+Photonic Ship is a simple 2D game made in Python using Pygame. It was developed for a project at Vilnius University on April 12, 2025. The game includes basic mechanics inspired by quantum computing concepts like state switching and measurement.
 
 ## How to Play
 
